@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jump Lab</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#ff5a1f"><link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f5f5f7;--card:#fff;--tx:#16161a;--mut:#74747f;--ac:#ff5a1f;--bd:#e4e4ea;--in:#f0f0f4}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0f0f12;--card:#1a1a1f;--tx:#f2f2f5;--mut:#8d8d99;--bd:#2a2a31;--in:#25252c}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0f0f12;--card:#1a1a1f;--tx:#f2f2f5;--mut:#8d8d99;--bd:#2a2a31;--in:#25252c}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding-bottom:84px}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:24px;margin:4px 0 14px}h2{font-size:17px;margin:18px 0 8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:10px}
+.day{display:flex;gap:12px}.day.today{border-color:var(--ac)}
+.dt{min-width:52px;text-align:center}.dt b{display:block;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}.dt span{font-size:24px;font-weight:700}
+.day.today .dt span{color:var(--ac)}.dc{flex:1;min-width:0}
+.w{background:var(--in);border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer}.w small{color:var(--mut);display:block}
+button{font:inherit;border:0;border-radius:10px;padding:9px 14px;background:var(--in);color:var(--tx);cursor:pointer}
+button.p{background:var(--ac);color:#fff;font-weight:600}button.d{color:#e5384b}button.s{padding:4px 9px}
+.add{color:var(--mut);font-size:13px;background:none;padding:2px 0}
+input,select{font:inherit;background:var(--in);color:var(--tx);border:1px solid transparent;border-radius:8px;padding:8px;width:100%;min-width:0}
+input:focus{outline:2px solid var(--ac)}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sg{display:grid;grid-template-columns:28px 1fr 1fr 1fr 34px;gap:6px;align-items:center;margin:6px 0;font-size:12px;color:var(--mut)}
+.sg input{padding:7px 4px;text-align:center}
+.modal{position:fixed;inset:0;background:#0008;z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chip{padding:5px 11px;border-radius:99px;font-size:13px}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs button{flex:1;border-radius:0;background:none;color:var(--mut);padding:12px 4px;font-size:12px}.tabs button.on{color:var(--ac);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:var(--mut)}
+.cam{position:relative;background:#000;border-radius:14px;overflow:hidden}.cam video,.cam canvas{display:block;width:100%}.cam canvas{position:absolute;inset:0;height:100%}
+.big{font-size:44px;font-weight:800;color:var(--ac);text-align:center}
+.muted{color:var(--mut);font-size:13px}.btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+svg text{fill:var(--mut);font-size:9px}
+</style></head><body>
+<main id="m"></main>
+<nav class="tabs" id="tabs"></nav>
+<div id="md"></div>
+<script>
+const $=s=>document.querySelector(s),e=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DEF={w:[],lib:['Back Squat','Trap Bar Jump','Depth Jump','Power Clean','Box Jump'],j:[],lv:0};
+let S;try{S=JSON.parse(localStorage.getItem('jl'))||DEF}catch(x){S=DEF}
+const save=()=>{try{localStorage.setItem('jl',JSON.stringify(S))}catch(x){}};
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let tab='week',off=0,D=null,px='';
+const TABS=[['week','📅','Week'],['lib','🏋️','Exercises'],['prog','📈','Progress'],['vbt','🎥','Bar Speed']];
+function nav(t){if(tab==='vbt')stopCam();tab=t;render()}
+function render(){
+ $('#tabs').innerHTML=TABS.map(t=>`<button class="${tab===t[0]?'on':''}" onclick="nav('${t[0]}')">${t[1]}<br>${t[2]}</button>`).join('');
+ ({week:wk,lib:lb,prog:pg,vbt:vb})[tab]()}
+function wk(){
+ const n=new Date(),today=ymd(n),s=new Date(n);s.setDate(n.getDate()-((n.getDay()+6)%7)+off*7);
+ const E=new Date(s);E.setDate(s.getDate()+6);
+ let h=`<h1>Training Week</h1><div class="nav"><button onclick="off--;render()">‹</button><b>${MN[s.getMonth()]} ${s.getDate()} – ${MN[E.getMonth()]} ${E.getDate()}</b><button onclick="off++;render()">›</button></div>`;
+ for(let i=0;i<7;i++){const d=new Date(s);d.setDate(s.getDate()+i);const k=ymd(d);
+  h+=`<div class="card day ${k===today?'today':''}"><div class="dt"><b>${DN[i].slice(0,3)}</b><span>${d.getDate()}</span><b>${MN[d.getMonth()]}</b></div><div class="dc"><div class="row"><b>${DN[i]}</b><button class="add" onclick="ow(null,'${k}')">+ Add workout</button></div>`;
+  const L=S.w.filter(x=>x.date===k);
+  h+=L.length?L.map(w=>`<div class="w" onclick="ow('${w.id}')"><b>${e(w.name||'Workout')}</b><small>${w.items.map(it=>e(it.ex)+' '+it.sets.length+'×'+it.sets[0]?.r).join(' · ')||'No exercises yet'}</small></div>`).join(''):'<div class="muted">Rest day</div>';
+  h+='</div></div>'}
+ $('#m').innerHTML=h}
+function ow(id,date){D=id?JSON.parse(JSON.stringify(S.w.find(x=>x.id===id))):{id:'w'+Date.now(),date,name:'',items:[],isNew:1};ed()}
+function sync(){if($('#wn')){D.name=$('#wn').value;D.date=$('#wd').value||D.date}}
+function ed(){sync();
+ $('#md').innerHTML=`<div class="modal"><div class="sheet"><div class="row"><h1 style="margin:0">${D.isNew?'New workout':'Edit workout'}</h1><button onclick="cl()">✕</button></div>
+ <div class="card"><input id="wn" placeholder="Workout name (e.g. Lower Power)" value="${e(D.name)}" style="margin-bottom:8px"><input id="wd" type="date" value="${D.date}"></div>
+ ${D.items.map((it,i)=>`<div class="card"><div class="row"><b>${e(it.ex)}</b><button class="s d" onclick="sync();D.items.splice(${i},1);ed()">Remove</button></div>
+ <div class="sg"><span>Set</span><span>Reps</span><span>Weight (kg)</span><span>Speed (m/s)</span><span></span></div>
+ ${it.sets.map((s,j)=>`<div class="sg"><span>${j+1}</span><input type="number" inputmode="decimal" value="${s.r}" onchange="D.items[${i}].sets[${j}].r=+this.value"><input type="number" inputmode="decimal" value="${s.w}" onchange="D.items[${i}].sets[${j}].w=+this.value"><input type="number" inputmode="decimal" step="0.01" value="${s.v||''}" onchange="D.items[${i}].sets[${j}].v=+this.value"><button class="s" title="Use last bar-speed result" onclick="sync();D.items[${i}].sets[${j}].v=S.lv;ed()">⚡</button></div>`).join('')}
+ <div class="btns" style="margin:4px 0 0"><button class="s" onclick="sync();const a=D.items[${i}].sets;a.push({...a[a.length-1]||{r:5,w:0,v:0}});ed()">+ Set</button><button class="s" onclick="sync();D.items[${i}].sets.pop();ed()">− Set</button></div></div>`).join('')}
+ <div class="card"><b>Add exercise</b><div class="chips">${S.lib.map((x,i)=>`<button class="chip" onclick="ax(S.lib[${i}])">${e(x)}</button>`).join('')}</div>
+ <div class="row"><input id="ne" placeholder="New exercise name"><button class="p" onclick="ax($('#ne').value)">Add</button></div><div class="muted" style="margin-top:6px">New exercises are saved to your library automatically.</div></div>
+ <div class="btns"><button class="p" style="flex:1" onclick="sv()">Save workout</button>${D.isNew?'':'<button class="d" onclick="dw()">Delete</button>'}</div></div></div>`}
+function ax(n){n=(n||'').trim();if(!n)return;sync();if(!S.lib.some(x=>x.toLowerCase()===n.toLowerCase())){S.lib.push(n);save()}
+ n=S.lib.find(x=>x.toLowerCase()===n.toLowerCase());D.items.push({ex:n,sets:[1,2,3].map(()=>({r:5,w:0,v:0}))});ed()}
+function sv(){sync();delete D.isNew;const i=S.w.findIndex(x=>x.id===D.id);i<0?S.w.push(D):S.w[i]=D;save();cl()}
+function dw(){S.w=S.w.filter(x=>x.id!==D.id);save();cl()}
+function cl(){$('#md').innerHTML='';render()}
+function lb(){$('#m').innerHTML=`<h1>Exercise Library</h1><div class="card"><div class="row"><input id="le" placeholder="New exercise"><button class="p" onclick="const v=$('#le').value.trim();if(v&&!S.lib.includes(v)){S.lib.push(v);save()}render()">Add</button></div></div>`+S.lib.map((x,i)=>`<div class="card row"><span>${e(x)}</span><button class="s d" onclick="S.lib.splice(${i},1);save();render()">Delete</button></div>`).join('')}
+function chart(p,u){if(p.length<1)return'<div class="muted">No data yet.</div>';
+ const ys=p.map(a=>a.y),lo=Math.min(...ys),hi=Math.max(...ys),r=hi-lo||1,X=i=>20+(p.length>1?i*(270/(p.length-1)):135),Y=y=>100-(y-lo)/r*80;
+ return`<svg viewBox="0 0 300 120" width="100%"><polyline fill="none" stroke="var(--ac)" stroke-width="2" points="${p.map((a,i)=>X(i)+','+Y(a.y)).join(' ')}"/>${p.map((a,i)=>`<circle cx="${X(i)}" cy="${Y(a.y)}" r="3.5" fill="var(--ac)"/><text x="${X(i)}" y="${Y(a.y)-7}" text-anchor="middle">${+a.y.toFixed(2)}</text>`).join('')}<text x="2" y="116">${p[0].x}</text><text x="298" y="116" text-anchor="end">${p[p.length-1].x}${u?' ('+u+')':''}</text></svg>`}
+function pg(){
+ if(!px||!S.lib.includes(px))px=S.lib[0]||'';
+ const ss=S.w.filter(w=>w.items.some(i=>i.ex===px)).sort((a,b)=>a.date<b.date?-1:1).map(w=>{const st=w.items.filter(i=>i.ex===px).flatMap(i=>i.sets),vs=st.filter(s=>s.v>0);return{x:w.date.slice(5),w:Math.max(0,...st.map(s=>s.w)),v:vs.length?vs.reduce((a,s)=>a+s.v,0)/vs.length:0}});
+ const J=[...S.j].sort((a,b)=>a.d<b.d?-1:1);
+ $('#m').innerHTML=`<h1>Progress</h1><div class="card"><select onchange="px=this.value;render()">${S.lib.map(x=>`<option ${x===px?'selected':''}>${e(x)}</option>`).join('')}</select>
+ <div class="stats" style="margin-top:12px"><div class="stat"><b>${ss.length}</b><span>Sessions</span></div><div class="stat"><b>${Math.max(0,...ss.map(s=>s.w))} kg</b><span>Best load</span></div><div class="stat"><b>${Math.max(0,...ss.map(s=>s.v)).toFixed(2)}</b><span>Best m/s</span></div></div></div>
+ <h2>Top weight (kg)</h2><div class="card">${chart(ss.map(s=>({x:s.x,y:s.w})))}</div>
+ <h2>Average bar speed (m/s)</h2><div class="card">${chart(ss.filter(s=>s.v).map(s=>({x:s.x,y:s.v})))}</div>
+ <h2>Vertical jump test (cm)</h2><div class="card">${chart(J.map(j=>({x:j.d.slice(5),y:j.h})))}<div class="row" style="margin-top:10px"><input id="jh" type="number" inputmode="decimal" placeholder="Jump height (cm)"><button class="p" onclick="const h=+$('#jh').value;if(h){S.j.push({d:ymd(new Date()),h});save();render()}">Log</button></div></div>`}
+/* ---- Velocity camera ---- */
+let C={stream:null,mode:'',pt:null,col:null,cal:[],k:0,rec:0,data:[],res:null},W=320,H=240;
+function vb(){
+ $('#m').innerHTML=`<h1>Bar Speed (VBT)</h1><div class="card muted">Stick a bright, distinct marker (tape/sticker) on the end of the bar or on the body. Film from the side with the phone still, then: <b>1</b> tap the marker, <b>2</b> tap two points a known distance apart (e.g. plate diameter, 45 cm), <b>3</b> record.</div>
+ <div class="cam"><video id="v" playsinline muted></video><canvas id="o"></canvas></div>
+ <div class="btns"><button class="p" onclick="cam()">Start camera</button><button onclick="C.mode='pick';msg('Tap the marker')">1 · Pick marker</button><button onclick="C.mode='cal';C.cal=[];msg('Tap two reference points')">2 · Calibrate</button><button id="rb" onclick="rec()">3 · Record</button></div>
+ <div class="muted">Reference length (cm): <input id="rl" type="number" value="45" style="width:90px;display:inline-block"></div><div id="ms" class="muted" style="margin:8px 0"></div><div id="rs"></div>`;
+ $('#o').onclick=tap}
+const msg=t=>{if($('#ms'))$('#ms').textContent=t};
+async function cam(){try{C.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720},frameRate:{ideal:60}},audio:false});const v=$('#v');v.srcObject=C.stream;await v.play();H=Math.round(W*v.videoHeight/v.videoWidth);$('#o').width=W;$('#o').height=H;msg('Camera on. Pick your marker.');tick()}catch(x){msg('Camera unavailable. Allow camera access, or open this page in your browser.')}}
+function stopCam(){C.rec=0;if(C.stream){C.stream.getTracks().forEach(t=>t.stop());C.stream=null}}
+const sc=document.createElement('canvas'),sx=sc.getContext('2d',{willReadFrequently:true});sc.width=W;
+function tap(ev){if(!C.stream)return;const r=ev.target.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*W,y=(ev.clientY-r.top)/r.height*H;
+ if(C.mode==='pick'){sx.drawImage($('#v'),0,0,W,H);const d=sx.getImageData(Math.max(0,x-2)|0,Math.max(0,y-2)|0,5,5).data;let a=[0,0,0];for(let i=0;i<d.length;i+=4){a[0]+=d[i];a[1]+=d[i+1];a[2]+=d[i+2]}C.col=a.map(v=>v/25);C.pt={x,y};C.mode='';msg('Marker locked. Now calibrate.')}
+ else if(C.mode==='cal'){C.cal.push({x,y});if(C.cal.length===2){const d=Math.hypot(C.cal[1].x-C.cal[0].x,C.cal[1].y-C.cal[0].y);C.k=(+$('#rl').value||45)/d;C.mode='';msg('Calibrated. Ready to record.')}}}
+function tick(){if(!C.stream)return;sc.height=H;sx.drawImage($('#v'),0,0,W,H);if(C.rec&&C.col)track();ov();requestAnimationFrame(tick)}
+function track(){const R=40,x0=Math.max(0,C.pt.x-R|0),y0=Math.max(0,C.pt.y-R|0),w=Math.min(W,C.pt.x+R)-x0|0,h=Math.min(H,C.pt.y+R)-y0|0;if(w<1||h<1)return;const d=sx.getImageData(x0,y0,w,h).data;let n=0,X=0,Y=0;
+ for(let i=0;i<d.length;i+=4){const q=(d[i]-C.col[0])**2+(d[i+1]-C.col[1])**2+(d[i+2]-C.col[2])**2;if(q<3600){const p=i/4;X+=x0+p%w;Y+=y0+(p/w|0);n++}}
+ if(n>=4){C.pt={x:X/n,y:Y/n};C.data.push({t:performance.now()/1000,y:C.pt.y})}}
+function ov(){const c=$('#o').getContext('2d');c.clearRect(0,0,W,H);c.lineWidth=2;
+ if(C.cal.length){c.strokeStyle='#4af';c.beginPath();C.cal.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.stroke()}
+ if(C.pt){c.strokeStyle=C.rec?'#f33':'#3f6';c.beginPath();c.arc(C.pt.x,C.pt.y,10,0,7);c.stroke()}}
+function rec(){if(!C.stream)return msg('Start the camera first.');if(!C.col||!C.k)return msg('Pick the marker and calibrate first.');
+ if(!C.rec){C.data=[];C.rec=1;$('#rb').textContent='■ Stop';msg('Recording… perform your rep(s).')}
+ else{C.rec=0;$('#rb').textContent='3 · Record';analyze()}}
+function analyze(){const d=C.data;if(d.length<8)return msg('Not enough tracking data. Check lighting/marker.');
+ const sm=(a,n)=>a.map((_,i)=>{let s=0,c=0;for(let j=i-n;j<=i+n;j++)if(a[j]!==undefined){s+=a[j];c++}return s/c});
+ const h=sm(d.map(p=>-p.y*C.k/100),2),v=sm(h.slice(1).map((y,i)=>(y-h[i])/(d[i+1].t-d[i].t||.033)),1),reps=[];let s=-1;
+ for(let i=0;i<=v.length;i++){const up=i<v.length&&v[i]>.05;if(up&&s<0)s=i;if(!up&&s>=0){const dist=h[i]-h[s],dur=d[i].t-d[s].t;if(dist>.08&&dur>.1)reps.push({mcv:dist/dur,pk:Math.max(...v.slice(s,i)),rom:dist});s=-1}}
+ if(!reps.length){$('#rs').innerHTML='<div class="card muted">No upward movement detected. Try again.</div>';return msg('')}
+ S.lv=+(reps.reduce((a,r)=>a+r.mcv,0)/reps.length).toFixed(2);save();msg('');
+ $('#rs').innerHTML=`<div class="card"><div class="big">${S.lv} m/s</div><div class="muted" style="text-align:center">avg mean concentric velocity · tap ⚡ in a workout set to use it</div></div>`+reps.map((r,i)=>`<div class="card row"><b>Rep ${i+1}</b><span>Mean ${r.mcv.toFixed(2)} · Peak ${r.pk.toFixed(2)} m/s · ${(r.rom*100).toFixed(0)} cm</span></div>`).join('')}
+render();if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script></body></html>
